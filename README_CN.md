@@ -95,9 +95,8 @@ A-Simple-DSMoE/
 │       ├── expert.py         # ExpertLayer、MoELayer、MoELoss
 │       └── ds_moe.py         # RMSNorm、MultiHeadLatentAttention、TransformerBlock、DSMoE
 │
-├── docs/                     # 文档（预留）
-├── examples/                 # 示例脚本（预留）
-└── scripts/                  # 训练/推理脚本（预留）
+├── docs/                     # 文档
+├── examples/                 # 示例脚本
 ```
 
 ---
