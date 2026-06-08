@@ -1,7 +1,7 @@
 # A-Simple-DSMoE
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
-[![MindSpore](https://img.shields.io/badge/MindSpore-2.0+-green.svg)](https://www.mindspore.cn/)
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
+[![MindSpore](https://img.shields.io/badge/MindSpore-2.8.0+-green.svg)](https://www.mindspore.cn/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-orange.svg)](LICENSE)
 
 A **simplified implementation** illustrating the core principles of the **DeepSeek-MoE** model, built on the **[MindSpore](https://www.mindspore.cn/)** framework. This project is designed **exclusively for learning and academic research** — not for industrial deployment.
@@ -46,10 +46,10 @@ A **simplified implementation** illustrating the core principles of the **DeepSe
 
 This project provides a clean, minimal implementation that captures the essential ideas of DeepSeek-MoE:
 
-- **`dsmoe/`** — Core package (to be populated with MoE layers, gating, and Transformer modules)
-- **`dsmoe/model/`** — Model subpackage (expert, gating, decoder layer definitions)
-- **`examples/`** — Runnable demo scripts
-- **`docs/`** — Documentation
+- **`dsmoe/model/expert.py`** — MoE submodule containing `ExpertLayer`, `MoELayer` (with shared & routed expert isolation), and `MoELoss` (load-balancing loss)
+- **`dsmoe/model/ds_moe.py`** — Core model with `RMSNorm`, `MultiHeadLatentAttention` (MLA), `TransformerBlock`, and `DSMoE` (full DeepSeek-MoE model)
+- **`examples/`** — Runnable demo scripts (reserved)
+- **`docs/`** — Documentation (reserved)
 
 ---
 
@@ -91,7 +91,9 @@ A-Simple-DSMoE/
 ├── dsmoe/                    # Core package
 │   ├── __init__.py           # Package exports
 │   └── model/                # Model subpackage
-│       └── __init__.py       # Model exports
+│       ├── __init__.py       # Model exports
+│       ├── expert.py         # ExpertLayer, MoELayer, MoELoss
+│       └── ds_moe.py         # RMSNorm, MultiHeadLatentAttention, TransformerBlock, DSMoE
 │
 ├── docs/                     # Documentation (reserved)
 ├── examples/                 # Example scripts (reserved)
@@ -104,7 +106,7 @@ A-Simple-DSMoE/
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.9 or higher
 - pip (Python package manager)
 
 ### CPU
@@ -153,13 +155,25 @@ print(mindspore.get_context("device_target"))
 ```python
 import mindspore as ms
 from mindspore import Tensor
+from dsmoe.model.ds_moe import DSMoE
 
-# Once the model components are finalized:
-# from dsmoe import DeepSeekMoE
-# model = DeepSeekMoE(vocab_size=10000, ...)
-# output = model(input_ids)
+# Create a DeepSeek-MoE model
+model = DSMoE(
+    vocab_size=10000,
+    d_model=2048,
+    nhead=16,
+    num_layers=6,
+    num_experts=16,
+    n_shared_experts=2,
+    top_k=6,
+    dim_feedforward=2048
+)
 
-print("Ready! Set up your model in dsmoe/model/")
+# Forward pass
+input_ids = Tensor([[1, 2, 3, 4, 5]], ms.int32)
+output, aux_loss = model(input_ids)
+print(f"Output shape: {output.shape}")
+print(f"Auxiliary loss: {aux_loss}")
 ```
 
 See the `examples/` directory for runnable demos (coming soon).
