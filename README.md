@@ -97,7 +97,6 @@ A-Simple-DSMoE/
 │
 ├── docs/                     # Documentation (reserved)
 ├── examples/                 # Example scripts (reserved)
-└── scripts/                  # Training & inference scripts (reserved)
 ```
 
 ---
