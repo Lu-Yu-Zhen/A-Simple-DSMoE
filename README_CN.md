@@ -1,7 +1,7 @@
 # A-Simple-DSMoE（简易 DeepSeek-MoE 实现）
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
-[![MindSpore](https://img.shields.io/badge/MindSpore-2.0+-green.svg)](https://www.mindspore.cn/)
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
+[![MindSpore](https://img.shields.io/badge/MindSpore-2.8.0+-green.svg)](https://www.mindspore.cn/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-orange.svg)](LICENSE)
 
 基于 **[MindSpore](https://www.mindspore.cn/)** 框架实现的 **DeepSeek-MoE** 模型核心原理的**简化版本**。本项目**专为学习和学术研究设计**，不适用于工业部署。
@@ -46,10 +46,10 @@
 
 本项目提供一个简洁、极简的实现，捕捉 DeepSeek-MoE 的核心思想：
 
-- **`dsmoe/`** — 核心包（MoE 层、门控网络、Transformer 模块）
-- **`dsmoe/model/`** — 模型子包（专家、门控、解码器层定义）
-- **`examples/`** — 可运行的示例脚本
-- **`docs/`** — 文档
+- **`dsmoe/model/expert.py`** — MoE 子模块，包含 `ExpertLayer`、`MoELayer`（含共享专家和路由专家隔离）和 `MoELoss`（负载均衡损失）
+- **`dsmoe/model/ds_moe.py`** — 核心模型，包含 `RMSNorm`、`MultiHeadLatentAttention`（MLA）、`TransformerBlock` 和 `DSMoE`（完整 DeepSeek-MoE 模型）
+- **`examples/`** — 可运行的示例脚本（预留）
+- **`docs/`** — 文档（预留）
 
 ---
 
@@ -91,7 +91,9 @@ A-Simple-DSMoE/
 ├── dsmoe/                    # 核心源码包
 │   ├── __init__.py           # 包导出声明
 │   └── model/                # 模型子包
-│       └── __init__.py       # 模型导出声明
+│       ├── __init__.py       # 模型导出声明
+│       ├── expert.py         # ExpertLayer、MoELayer、MoELoss
+│       └── ds_moe.py         # RMSNorm、MultiHeadLatentAttention、TransformerBlock、DSMoE
 │
 ├── docs/                     # 文档（预留）
 ├── examples/                 # 示例脚本（预留）
@@ -104,7 +106,7 @@ A-Simple-DSMoE/
 
 ### 环境要求
 
-- Python 3.8 或更高版本
+- Python 3.9 或更高版本
 - pip（Python 包管理器）
 
 ### CPU
@@ -153,13 +155,25 @@ print(mindspore.get_context("device_target"))
 ```python
 import mindspore as ms
 from mindspore import Tensor
+from dsmoe.model.ds_moe import DSMoE
 
-# 待模型组件完成后可运行：
-# from dsmoe import DeepSeekMoE
-# model = DeepSeekMoE(vocab_size=10000, ...)
-# output = model(input_ids)
+# 创建 DeepSeek-MoE 模型
+model = DSMoE(
+    vocab_size=10000,
+    d_model=2048,
+    nhead=16,
+    num_layers=6,
+    num_experts=16,
+    n_shared_experts=2,
+    top_k=6,
+    dim_feedforward=2048
+)
 
-print("就绪！请在 dsmoe/model/ 目录下配置模型")
+# 前向传播
+input_ids = Tensor([[1, 2, 3, 4, 5]], ms.int32)
+output, aux_loss = model(input_ids)
+print(f"输出形状: {output.shape}")
+print(f"辅助损失: {aux_loss}")
 ```
 
 可运行的示例脚本将在 `examples/` 目录中提供（即将推出）。
