@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Project Documentation / 项目文档
+    url: https://github.com/Lu-Yu-Zhen/A-Simple-DSMoE/tree/main/docs
+    about: Check the docs before creating an issue / 提交 Issue 前请先查阅文档
+  - name: Q&A Discussions / 问答讨论
+    url: https://github.com/Lu-Yu-Zhen/A-Simple-DSMoE/discussions
+    about: Have a question? Ask it here / 有问题？在此提问
