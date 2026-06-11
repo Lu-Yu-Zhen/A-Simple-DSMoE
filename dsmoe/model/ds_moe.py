@@ -463,10 +463,4 @@ class DSMoE(nn.Cell):
             int: 可训练参数的数量
         """
         return sum([p.numel() for p in self.trainable_params()])
-
-
-block=TransformerBlock()
-model=DSMoE(block)
-inp=Tensor(ops.ones((2,50,1024)))
-out, aux_loss=model(inp)
-print(out.shape)
+        
