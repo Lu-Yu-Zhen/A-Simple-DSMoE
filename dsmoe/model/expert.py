@@ -163,14 +163,18 @@ class MoELayer(nn.Cell):
 class MoELoss(nn.LossBase):
     """
     RoutedExpert total loss = main cross-entropy loss + alpha * auxiliary load-balancing loss.
+
+    aux_loss 可在构造时给定默认值, 也可在 construct 时按当前步传入
+    (训练循环中应每步传入 MoELayer 返回的 aux_loss, 避免使用陈旧值)。
     """
 
-    def __init__(self, aux_loss, alpha: float = 0.1):
+    def __init__(self, aux_loss=0.0, alpha: float = 0.1):
         super().__init__()
         self.aux_loss = aux_loss
         self.alpha = alpha
         self.main_loss_fn = nn.CrossEntropyLoss()
 
-    def construct(self, logits, labels):
+    def construct(self, logits, labels, aux_loss=None):
         main_loss = self.main_loss_fn(logits, labels)
-        return main_loss + self.alpha * self.aux_loss
+        aux = aux_loss if aux_loss is not None else self.aux_loss
+        return main_loss + self.alpha * aux

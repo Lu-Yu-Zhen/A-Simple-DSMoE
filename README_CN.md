@@ -153,29 +153,24 @@ print(mindspore.get_context("device_target"))
 
 ```python
 import mindspore as ms
-from mindspore import Tensor
-from dsmoe.model.ds_moe import DSMoE
+from mindspore import ops
+from dsmoe.model.ds_moe import DSMoE, TransformerBlock
 
-# 创建 DeepSeek-MoE 模型
-model = DSMoE(
-    vocab_size=10000,
-    d_model=2048,
-    nhead=16,
-    num_layers=6,
-    num_experts=16,
-    n_shared_experts=2,
-    top_k=6,
-    dim_feedforward=2048
+# 创建 DeepSeek-MoE 模型（每块 MLA + 共享/路由专家）
+block = TransformerBlock(
+    dim_model=256, n_heads=8, shared_ffn_dim=256,
+    router_ffn_dim=128, num_experts=16, top_k=6,
 )
+model = DSMoE(block, num_blocks=6)
 
-# 前向传播
-input_ids = Tensor([[1, 2, 3, 4, 5]], ms.int32)
-output, aux_loss = model(input_ids)
+# 前向传播，输入为隐状态 (B, L, D)
+x = ops.randn((1, 5, 256), dtype=ms.float32)
+output, aux_loss = model(x)
 print(f"输出形状: {output.shape}")
 print(f"辅助损失: {aux_loss}")
 ```
 
-可运行的示例脚本将在 `examples/` 目录中提供（即将推出）。
+可运行版本见 `examples/quick_start.py`。
 
 ---
 

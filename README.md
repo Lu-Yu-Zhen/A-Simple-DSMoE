@@ -153,29 +153,24 @@ print(mindspore.get_context("device_target"))
 
 ```python
 import mindspore as ms
-from mindspore import Tensor
-from dsmoe.model.ds_moe import DSMoE
+from mindspore import ops
+from dsmoe.model.ds_moe import DSMoE, TransformerBlock
 
-# Create a DeepSeek-MoE model
-model = DSMoE(
-    vocab_size=10000,
-    d_model=2048,
-    nhead=16,
-    num_layers=6,
-    num_experts=16,
-    n_shared_experts=2,
-    top_k=6,
-    dim_feedforward=2048
+# Create a DeepSeek-MoE model (MLA + shared/routed experts per block)
+block = TransformerBlock(
+    dim_model=256, n_heads=8, shared_ffn_dim=256,
+    router_ffn_dim=128, num_experts=16, top_k=6,
 )
+model = DSMoE(block, num_blocks=6)
 
-# Forward pass
-input_ids = Tensor([[1, 2, 3, 4, 5]], ms.int32)
-output, aux_loss = model(input_ids)
+# Forward pass on hidden states (B, L, D)
+x = ops.randn((1, 5, 256), dtype=ms.float32)
+output, aux_loss = model(x)
 print(f"Output shape: {output.shape}")
 print(f"Auxiliary loss: {aux_loss}")
 ```
 
-See the `examples/` directory for runnable demos (coming soon).
+A runnable version is provided at `examples/quick_start.py`.
 
 ---
 

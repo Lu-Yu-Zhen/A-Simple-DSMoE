@@ -27,17 +27,11 @@ pip install jieba matplotlib numpy   # optional: data processing & visualization
 
 ## 2. Module Import / 模块导入
 
-> **IMPORTANT**: Before running the code, you need to fix a relative import in `dsmoe/model/ds_moe.py`:
->
-> Change `from model.expert import MoELayer` → `from .expert import MoELayer`
->
-> This ensures the import works correctly within the `dsmoe.model` package.
+包内相对导入已修复（`dsmoe/model/ds_moe.py` 使用 `from .expert import MoELayer`），
+克隆后可直接导入，无需手动改代码。
 
-> **重要提示**：运行前需修复 `dsmoe/model/ds_moe.py` 中的相对导入：
->
-> 将 `from model.expert import MoELayer` 改为 `from .expert import MoELayer`
->
-> 确保在 `dsmoe.model` 包内的导入正确工作。
+The in-package relative import is fixed (`dsmoe/model/ds_moe.py` uses
+`from .expert import MoELayer`); you can import directly after cloning.
 
 ---
 

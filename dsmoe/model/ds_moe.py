@@ -3,7 +3,7 @@ import copy
 import mindspore as ms
 from mindspore import nn, ops, Parameter, Tensor
 
-from model.expert import MoELayer
+from .expert import MoELayer
 
 __all__ = ["RMSNorm", "MultiHeadLatentAttention", "TransformerBlock", "DSMoE"]
 
@@ -95,7 +95,7 @@ class MultiHeadLatentAttention(nn.Cell):
         self.W_uv = nn.Dense(kv_lora_rank, n_heads * v_head_dim)
         self.W_kr = nn.Dense(dim_model, qk_rope_head_dim)
 
-        self.W_o = nn.Dense(qh_nope_head_dim * n_heads, dim_model)
+        self.W_o = nn.Dense(v_head_dim * n_heads, dim_model)
 
         self.reshape = ops.Reshape()
         self.transpose = ops.Transpose()
@@ -171,7 +171,9 @@ class MultiHeadLatentAttention(nn.Cell):
 
         x_dq = self.W_dq(x)                                          # (B, L, q_lora_rank)
         x_uq = self.W_uq(x_dq)                                       # (B, L, n_heads * qh_nope_head_dim)
-        x_r_reshape = self.reshape(x_uq, (B, self.n_heads, L, self.qh_nope_head_dim))  # (B, n_heads, L, qh_nope_head_dim)
+        x_r_reshape = self.transpose(
+            self.reshape(x_uq, (B, L, self.n_heads, self.qh_nope_head_dim)),
+            (0, 2, 1, 3))                                            # (B, n_heads, L, qh_nope_head_dim)
 
         x_qr = self.W_qr(x)                                          # (B, L, qk_rope_head_dim)
         x_qr = self._apply_rotary_emb(x_qr, self._get_position_ids(L))  # 施加 RoPE
@@ -185,10 +187,14 @@ class MultiHeadLatentAttention(nn.Cell):
         x_dkv = self.W_dkv(x)                                        # (B, L, kv_lora_rank)，KV 共享低秩表示
 
         x_uk = self.W_uk(x_dkv)                                      # (B, L, n_heads * qh_nope_head_dim)
-        x_k_reshape = self.reshape(x_uk, (B, self.n_heads, L, self.qh_nope_head_dim))  # (B, n_heads, L, qh_nope_head_dim)
+        x_k_reshape = self.transpose(
+            self.reshape(x_uk, (B, L, self.n_heads, self.qh_nope_head_dim)),
+            (0, 2, 1, 3))                                            # (B, n_heads, L, qh_nope_head_dim)
 
         x_uv = self.W_uv(x_dkv)                                      # (B, L, n_heads * v_head_dim)
-        v = ops.reshape(x_uv, (B, self.n_heads, L, self.v_head_dim)) # (B, n_heads, L, v_head_dim)
+        v = self.transpose(
+            ops.reshape(x_uv, (B, L, self.n_heads, self.v_head_dim)),
+            (0, 2, 1, 3))                                            # (B, n_heads, L, v_head_dim)
 
         x_kr = self.W_kr(x)                                          # (B, L, qk_rope_head_dim)
         x_kr = self._apply_rotary_emb(x_kr, self._get_position_ids(L))  # 施加 RoPE
@@ -202,10 +208,15 @@ class MultiHeadLatentAttention(nn.Cell):
 
         muti_attn = ops.matmul(q, k)                                # (B, n_heads, L, L)
         muti_attn = muti_attn / self.softmax_scale                   # 1 / sqrt(d_head)
+        # 因果掩码: decoder 模型每个位置只能关注不晚于自身的位置
+        causal_mask = (ops.arange(L).reshape(1, 1, L, 1)
+                       >= ops.arange(L).reshape(1, 1, 1, L))
+        muti_attn = muti_attn + (1.0 - causal_mask.astype(muti_attn.dtype)) * (-1e9)
         muti_attn = ops.softmax(muti_attn, axis=-1)                  # 对最后一维（序列维度）做 softmax
         muti_attn = ops.matmul(muti_attn, v)                        # (B, n_heads, L, v_head_dim)
 
-        attn = ops.reshape(muti_attn, (B, L, -1))
+        attn = self.transpose(muti_attn, (0, 2, 1, 3))               # (B, L, n_heads, v_head_dim)
+        attn = ops.reshape(attn, (B, L, -1))                         # (B, L, n_heads * v_head_dim)
         attn_output = self.W_o(attn)                                 # (B, L, dim_model)
 
         return attn_output
@@ -324,10 +335,10 @@ class TransformerBlock(nn.Cell):
 
         norm_input = self.rms_norm1(input_data)
         mla_result = self._mla_block(norm_input)
-        input_data += mla_result
+        input_data = input_data + mla_result
         norm_input_1 = self.rms_norm2(input_data)
         moe_result, aux_loss = self._moe_ffn_block(norm_input_1)
-        input_data += moe_result
+        input_data = input_data + moe_result
 
         return input_data, aux_loss
 
@@ -416,10 +427,7 @@ class DSMoE(nn.Cell):
         Returns:
             int: 层数
         """
-        params=[]
-        for param in self.trainable_params():
-            params.append(param)
-        return len(params)
+        return self.num_blocks
 
     def __repr__(self):
         return f"DSMoE(num_blocks={self.num_blocks}, transformer_block={self.transformer_block})"
